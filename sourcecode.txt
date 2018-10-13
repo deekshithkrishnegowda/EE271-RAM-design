@@ -1,0 +1,104 @@
+module top(input reset,clock,en,wr_en,rd_en, output equal,not_equal);
+wire [7:0] w1,w3;
+reg [7:0]w2;
+
+
+counter COUNTER(.reset(reset),.en(en),.clock(clock),.count(w1));
+ram RAM(.rd_addr(w1),.wr_en(wr_en),.wr_addr(w1),.din(w1),.clock(clock),.reset(reset),.dout(w3),.rd_en(rd_en));
+comparator COMPARATOR(.A(w2),.B(w3),.equal(equal),.not_equal(not_equal));
+
+always@(posedge clock)
+begin
+	w2<=w1;
+end
+endmodule
+
+
+
+
+
+module counter(output reg [7:0]count, input clock,reset,en);
+always@(posedge clock)
+begin
+	if(reset)
+		count<=8'd0;
+	else
+	begin
+		if(en)
+			count<=count+1'b1;
+	end
+end
+endmodule
+
+
+
+module ram(input[7:0]din,output reg [7:0]dout,input reset,clock,wr_en,rd_en,
+	   input [7:0]wr_addr,rd_addr);
+
+reg [7:0]mem[255:0];  //memory declaration
+integer i;
+
+always@(posedge clock)
+begin
+	if(reset)
+	begin
+		for(i=0;i<256;i=i+1)
+			begin
+				mem[i]<=8'bx;
+			end
+	end
+	
+	else
+	begin
+		if(wr_en)   //write_operation
+			mem[wr_addr]<=din;
+		if(rd_en)        //read_operation
+			dout<=mem[rd_addr];	
+	end
+end
+endmodule
+
+
+module comparator (input [7:0]A,B, output not_equal,equal);
+
+assign equal=(A==B)?1:0;
+assign not_equal=(A!=B)?1:0;
+
+/*always@(*)
+begin
+	$display("A=%d,B=%d",A,B);
+end*/
+endmodule
+
+
+module top_tb();
+reg clock,reset,en,wr_en,rd_en;
+wire equal,not_equal;
+
+top DUT(reset,clock,en,wr_en,rd_en,equal,not_equal);
+
+always
+begin
+	clock=1'b0;
+	#5;clock=1'b1;
+	#5;
+end
+
+initial
+begin
+	@(negedge clock);reset=1;
+	repeat (254)
+		begin
+		@(negedge clock);en=1;wr_en=1;reset=0;
+		end
+	repeat(256)
+	begin
+		@(negedge clock);
+       		rd_en=1;
+		wr_en=0;
+	end
+		@(negedge clock);
+		@(negedge clock);
+	#10;$finish;
+end
+endmodul
